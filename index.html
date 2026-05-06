@@ -1,0 +1,673 @@
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Kanji Study Pro + Progress Tracker</title>
+
+<style>
+:root {
+  --primary: #2c3e50;
+  --accent: #d35400;
+  --success: #27ae60;
+  --info: #2980b9;
+  --bg: #f8f9fa;
+  --text: #333;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; font-family: 'Helvetica Neue', Arial, sans-serif; background: var(--bg); color: var(--text); }
+
+.container { width: 100%; max-width: 1200px; margin: 0 auto; padding: 20px; }
+
+/* --- HEADER & PROGRESS --- */
+header {
+  background: var(--primary); color: white; padding: 25px; border-radius: 15px;
+  margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px; }
+
+.progress-info { font-size: 14px; font-weight: bold; color: #bdc3c7; margin-bottom: 5px; display: block; }
+.progress-container { width: 100%; background: rgba(255,255,255,0.1); height: 8px; border-radius: 4px; overflow: hidden; margin-bottom: 20px; }
+#progressBar { width: 0%; height: 100%; background: var(--success); transition: width 0.3s ease; }
+
+/* --- MODE SELECTOR --- */
+.mode-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.mode-btn {
+  padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3);
+  background: rgba(255,255,255,0.1); color: white; cursor: pointer; font-weight: bold; font-size: 14px;
+}
+.mode-btn.active { background: var(--accent); border-color: var(--accent); }
+
+/* --- FLASHCARD --- */
+.flashcard {
+  background: white; border-radius: 20px; padding: 0px 0px;
+  text-align: center; margin-bottom: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+  border: 1px solid #eee; position: relative;
+}
+.main-text { font-size: 60px; font-weight: bold; margin: 0; color: #1a1a1a;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.sub-text { font-size: 48px; color: #7f8c8d; margin: 15px 0; min-height: 55px; }
+.meaning-text { font-size: 30px; color: var(--accent); font-weight: bold; margin-bottom: 10px; min-height: 35px; }
+.romaji-text { font-size: 22px; color: #95a5a6; font-style: italic; min-height: 25px; }
+
+.hidden { visibility: hidden; opacity: 0; }
+.visible { visibility: visible; opacity: 1; transition: opacity 0.3s; }
+
+/* --- CONTROLS --- */
+.controls-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 40px; }
+.controls-grid button {
+  padding: 20px; border-radius: 12px; border: none; font-size: 18px; font-weight: bold;
+  cursor: pointer; transition: transform 0.1s;
+}
+.controls-grid button:active { transform: scale(0.97); }
+.btn-reveal { background: var(--success); color: white; grid-column: span 2; }
+.btn-stroke { background: var(--info); color: white; grid-column: span 2; }
+.btn-nav { background: #eee; color: #555; }
+
+/* --- STROKE SECTION --- */
+.stroke-section { display: none; margin-top: 30px; border-top: 5px solid var(--primary); padding-top: 40px; }
+.kanji-row { background: white; padding: 35px; border-radius: 20px; margin-bottom: 40px; border: 1px solid #ddd; }
+.kanji-info { display: flex; align-items: center; gap: 25px; margin-bottom: 25px; }
+.btn-animate { background: var(--accent); color: white; border: none; padding: 12px 25px; border-radius: 50px; cursor: pointer; font-weight: bold; }
+
+.writing-area { display: flex; flex-wrap: wrap; gap: 20px; overflow-x: auto; padding-bottom: 10px; }
+.stroke-box {
+  width: 180px; height: 180px; border: 1px solid #ccc; flex-shrink: 0;
+  background-image: linear-gradient(to right, #f5f5f5 1px, transparent 1px), linear-gradient(to bottom, #f5f5f5 1px, transparent 1px);
+  background-size: 50% 50%; display: flex; align-items: center; justify-content: center;
+}
+.stroke-box svg { width: 150px; height: 150px; }
+path { fill: none; stroke: #333; stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; }
+
+@keyframes writePath { to { stroke-dashoffset: 0; } }
+
+@media (max-width: 768px) {
+  .main-text { font-size: 70px; }
+  .stroke-box { width: 150px; height: 150px; }
+  .controls-grid button { padding: 15px; font-size: 14px; }
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+  <header>
+    <div class="top-bar">
+      <h1 style="margin:0">Japanese Study Sensei</h1>
+      <select id="setSelect" style="padding:10px; border-radius:8px;"></select>
+    </div>
+
+    <span class="progress-info" id="progressText">Word 0 of 0 (0%)</span>
+    <div class="progress-container">
+      <div id="progressBar"></div>
+    </div>
+
+    <div class="mode-grid">
+      <button class="mode-btn active" id="btn-K2M" onclick="setMode('K2M')">Kanji → Read/Mean</button>
+      <button class="mode-btn" id="btn-S2MK" onclick="setMode('S2MK')">Sound → Kanji/Mean</button>
+      <button class="mode-btn" id="btn-M2SK" onclick="setMode('M2SK')">Meaning → Kanji/Read</button>
+    </div>
+  </header>
+
+  <div class="flashcard">
+    <div id="displayMain" class="main-text"></div>
+    <div id="displaySub" class="sub-text hidden"></div>
+    <div id="displayMeaning" class="meaning-text hidden"></div>
+    <div id="displayRomaji" class="romaji-text hidden"></div>
+  </div>
+
+  <div class="controls-grid">
+    <button class="btn-reveal" onclick="reveal()">REVEAL ANSWER</button>
+    <button class="btn-stroke" onclick="toggleStrokes()">SHOW STROKE ORDER</button>
+    <button class="btn-nav" onclick="changeCard(-1)">PREVIOUS</button>
+    <button class="btn-nav" onclick="changeCard(1)">NEXT</button>
+  </div>
+
+  <div id="strokeSection" class="stroke-section"></div>
+</div>
+
+<script>
+const allLessons = {
+"Lesson 1": [
+    { kanji: "私", word: "わたし", romaji: "watashi", meaning: "I / আমি", readings: ["わたし"] },
+    { kanji: "(お)名前", word: "(お)なまえ", romaji: "(o)namae", meaning: "name / নাম", readings: ["なまえ"] },
+    { kanji: "(お)国", word: "(お)くに", romaji: "(o)kuni", meaning: "country / দেশ", readings: ["くに"] },
+    { kanji: "日本", word: "にほん", romaji: "nihon", meaning: "Japan / জাপান", readings: ["にほん"] },
+    { kanji: "アメリカ", word: "アメリカ", romaji: "amerika", meaning: "America / আমেরিকা", readings: ["0"] },
+    { kanji: "イタリア", word: "イタリア", romaji: "itaria", meaning: "Italy / ইতালি", readings: ["0"] },
+    { kanji: "オーストラリア", word: "オーストラリア", romaji: "oosutoraria", meaning: "Australia / অস্ট্রেলিয়া", readings: ["0"] },
+    { kanji: "韓国", word: "かんこく", romaji: "kankoku", meaning: "Korea / কোরিয়া", readings: ["かん", "こく"] },
+    { kanji: "タイ", word: "タイ", romaji: "tai", meaning: "Thailand / থাইল্যান্ড", readings: ["0"] },
+    { kanji: "中国", word: "ちゅうごく", romaji: "chuugoku", meaning: "China / চীন", readings: ["ちゅう", "ごく"] },
+    { kanji: "ロシア", word: "ロシア", romaji: "roshia", meaning: "Russia / রাশিয়া", readings: ["0"] },
+    { kanji: "高校", word: "こうこう", romaji: "koukou", meaning: "high school / উচ্চ বিদ্যালয়", readings: ["こう", "こう"] },
+    { kanji: "大学", word: "だいがく", romaji: "daigaku", meaning: "university / বিশ্ববিদ্যালয়", readings: ["だい", "がく"] },
+    { kanji: "日本語学校", word: "にほんごがっこう", romaji: "nihongo gakkou", meaning: "Japanese language school / জাপানি ভাষার স্কুল", readings: ["に", "ほん", "ご", "がっ", "こう"] },
+    { kanji: "(お)仕事", word: "(お)しごと", romaji: "(o)shigoto", meaning: "work/job / কাজ", readings: ["し", "ごと"] },
+    { kanji: "学生", word: "がくせい", romaji: "gakusei", meaning: "student / ছাত্র", readings: ["がく", "せい"] },
+    { kanji: "先生", word: "せんせい", romaji: "sensei", meaning: "teacher / শিক্ষক", readings: ["せん", "せい"] },
+    { kanji: "教師", word: "きょうし", romaji: "kyoushi", meaning: "teacher (job title) / শিক্ষক", readings: ["きょう", "し"] },
+    { kanji: "会社員", word: "かいしゃいん", romaji: "kaishain", meaning: "business person / ব্যবসায়ী", readings: ["かい", "しゃ", "いん"] },
+    { kanji: "社員", word: "しゃいん", romaji: "shain", meaning: "company employee / কোম্পানির কর্মচারী", readings: ["しゃ", "いん"] },
+    { kanji: "～さん", word: "～さん", romaji: "~san", meaning: "Mr./ Mrs./ Miss/ Ms. / মি:/ মিসেস / মিস", readings: ["0"] },
+    { kanji: "～人", word: "～じん", romaji: "~jin", meaning: "nationality / জাতীয়তা", readings: ["じん"] },
+    { kanji: "どちら", word: "どちら", romaji: "dochira", meaning: "which / কোনটি", readings: ["0"] },
+    { kanji: "お国はどちらですか", word: "おくににどちらですか", romaji: "okuni wa dochira desu ka", meaning: "Where are you from? / আপনি কোন দেশ থেকে?", readings: ["くに"] },
+    { kanji: "初めまして", word: "はじめまして", romaji: "hajimemashite", meaning: "It's a pleasure to meet you / আপনার সাথে দেখা করে আনন্দিত", readings: ["はじ"] },
+    { kanji: "よろしくお願いします", word: "よろしくおねがいします", romaji: "yoroshiku onegaishimasu", meaning: "I'm looking forward to knowing you / আমি আপনাকে জানার অপেক্ষায় আছি", readings: ["ねが"] },
+    { kanji: "こちらこそ", word: "こちらこそ", romaji: "kochirakoso", meaning: "Me, too / আমিও", readings: ["0"] },
+    { kanji: "あのう", word: "あのう", romaji: "anou", meaning: "Ah/Um / আহ / উম", readings: ["0"] },
+    { kanji: "すみません", word: "すみません", romaji: "sumimasen", meaning: "Excuse me / মাফ করবেন", readings: ["0"] },
+    { kanji: "あのう、すみません", word: "あのう、すみません", romaji: "anou, sumimasen", meaning: "Ah, excuse me / আহ, মাফ করবেন", readings: ["0"] },
+    { kanji: "そうですか", word: "そうてすか", romaji: "sou desu ka", meaning: "Oh, really? / ওহ, সত্যিই?", readings: ["0"] },
+    { kanji: "はい", word: "はい", romaji: "hai", meaning: "Yes / হ্যাঁ", readings: ["0"] },
+    { kanji: "いいえ", word: "いいえ", romaji: "iie", meaning: "No / না", readings: ["0"] },
+    { kanji: "誕生日", word: "たんじょうび", romaji: "tanjoubi", meaning: "birthday / জন্মদিন", readings: ["たん", "じょう", "び"] },
+    { kanji: "ブラジル", word: "ブラジル", romaji: "burajiru", meaning: "Brazil / ব্রাজিল", readings: ["0"] },
+    { kanji: "～月", word: "～がつ", romaji: "~gatsu", meaning: "month / মাস", readings: ["がつ"] },
+    { kanji: "～日", word: "～にち", romaji: "~nichi", meaning: "day / দিন", readings: ["にち"] },
+    { kanji: "～歳", word: "～さい", romaji: "~sai", meaning: "years old / বছর বয়সী", readings: ["さい"] },
+    { kanji: "いつ", word: "いつ", romaji: "itsu", meaning: "when / কখন", readings: ["0"] },
+    { kanji: "趣味", word: "しゅみ", romaji: "shumi", meaning: "hobby/interest / শখ", readings: ["しゅ", "み"] },
+    { kanji: "スポーツ", word: "スポーツ", romaji: "supootsu", meaning: "sports / ক্রীড়া", readings: ["0"] },
+    { kanji: "サッカー", word: "サッカー", romaji: "sakkaa", meaning: "soccer / ফুটবল খেলা", readings: ["0"] },
+    { kanji: "テニス", word: "テニス", romaji: "tenisu", meaning: "tennis / টেনিস", readings: ["0"] },
+    { kanji: "水泳", word: "すいえい", romaji: "suiei", meaning: "swimming / সাঁতার", readings: ["すい", "えい"] },
+    { kanji: "映画", word: "えいが", romaji: "eiga", meaning: "movies / চলচ্চিত্র", readings: ["えい", "が"] },
+    { kanji: "音楽", word: "おんがく", romaji: "ongaku", meaning: "music / সঙ্গীত", readings: ["おん", "がく"] },
+    { kanji: "読書", word: "どくしょ", romaji: "dokusho", meaning: "reading / পড়া", readings: ["どく", "しょ"] },
+    { kanji: "旅行", word: "りょこう", romaji: "ryokou", meaning: "travel / ভ্রমণ", readings: ["りょ", "こう"] },
+    { kanji: "料理", word: "りょうり", romaji: "ryouri", meaning: "cooking / রান্না করা", readings: ["りょう", "り"] },
+    { kanji: "私の趣味は料理です", word: "わたしのしゅみはりょうりです", romaji: "watashi no shumi wa ryouri desu", meaning: "My hobby is cooking / আমার শখ রান্না করা", readings: ["わたし", "しゅ", "み", "りょう", "り"] },
+    { kanji: "何", word: "なん", romaji: "nan", meaning: "what / কি", readings: ["0"] },
+    { kanji: "あ（っ）", word: "あ（っ）", romaji: "a(tsu)", meaning: "Ah / অই", readings: ["0"] },
+    { kanji: "わあ", word: "わあ", romaji: "waa", meaning: "Wow! / কি দারুণ!", readings: ["0"] },
+    { kanji: "同じですね", word: "おなじですね", romaji: "onaji desu ne", meaning: "It's the same, isn't it? / এটি একই, তাই না?", readings: ["おな"] }
+],
+
+  "Lesson 26": [
+  { kanji: "見ます、診ます", word: "みます", romaji: "mimasu", meaning: "Check, examine / দেখা, পরীক্ষা করা (ডাক্তার)", readings: ["み", "み"] },
+  { kanji: "探します、捜します", word: "さがします", romaji: "sagashimasu", meaning: "Look for, search / খোঁজা, অনুসন্ধান করা", readings: ["さが", "さが"] },
+  { kanji: "遅れます", word: "おくれます", romaji: "okuremasu", meaning: "Be late / দেরি হওয়া (সময়ে)", readings: ["おく"] },
+  { kanji: "間に合います", word: "まにあいます", romaji: "maniaimasu", meaning: "Be in time / সময়মতো পৌঁছানো", readings: ["ま", "あ"] },
+  { kanji: "やります", word: "やります", romaji: "yarimasu", stroke: "0", meaning: "Do / করা", readings: ["0"] },
+  { kanji: "拾います", word: "ひろいます", romaji: "hiroimasu", meaning: "Pick up / কুড়িয়ে নেওয়া", readings: ["ひろ"] },
+  { kanji: "連絡します", word: "れんらくします", romaji: "renrakushimasu", meaning: "Contact / যোগাযোগ করা", readings: ["れん", "らく"] },
+  { kanji: "気分がいい", word: "きぶんがいい", romaji: "kibun ga ii", meaning: "Feel well / ভালো অনুভব করা", readings: ["き", "ぶん"] },
+  { kanji: "気分が悪い", word: "きぶんがわるい", romaji: "kibun ga warui", meaning: "Feel ill / খারাপ অনুভব করা", readings: ["き", "ぶん", "わる"] },
+  { kanji: "運動会", word: "うんどうかい", romaji: "undoukai", meaning: "Sports day / ক্রীড়া দিবস", readings: ["うん", "どう", "かい"] },
+  { kanji: "盆踊り", word: "ぼんおどり", romaji: "bonodori", meaning: "Bon dance / বন নাচ (উৎসব)", readings: ["ぼん", "おど"] },
+  { kanji: "フリーマーケット", word: "フリーマーケット", romaji: "furii maaketto", meaning: "Flea market / পুরনো জিনিসের বাজার", readings: ["0"] },
+  { kanji: "場所", word: "ばしょ", romaji: "basho", meaning: "Place / জায়গা", readings: ["ば", "しょ"] },
+  { kanji: "ボランティア", word: "ボランティア", romaji: "borantia", meaning: "Volunteer / স্বেচ্ছাসেবক", readings: ["0"] },
+  { kanji: "財布", word: "さいふ", romaji: "saifu", meaning: "Wallet, purse / মানিব্যাগ", readings: ["さい", "ふ"] },
+  { kanji: "国会議事堂", word: "こっかいぎじどう", romaji: "kokkaigijidou", meaning: "Diet Building / জাতীয় সংসদ ভবন", readings: ["こっ", "かい", "ぎ", "じ", "どう"] },
+  { kanji: "平日", word: "へいじつ", romaji: "heijitsu", meaning: "Weekday / কর্মদিবস", readings: ["へい", "じつ"] },
+  { kanji: "～弁", word: "～べん", romaji: "～ben", meaning: "Dialect / উপভাষা", readings: ["べん"] },
+  { kanji: "今度", word: "こんど", romaji: "kondo", meaning: "Next time / পরের বার বা অন্য সময়", readings: ["こん", "ど"] },
+  { kanji: "ずいぶん", word: "ずいぶん", romaji: "zuibun", meaning: "Pretty, very / খুবই", readings: ["0"] },
+  { kanji: "直接", word: "ちょくせつ", romaji: "chokusetsu", meaning: "Directly / সরাসরি", readings: ["ちょく", "せつ"] },
+  { kanji: "いつでも", word: "いつでも", romaji: "itsu demo", meaning: "Anytime / যেকোনো সময়", readings: ["0"] },
+  { kanji: "どこでも", word: "どこでも", romaji: "doko demo", meaning: "Anywhere / যেকোনো জায়গায়", readings: ["0"] },
+  { kanji: "だれでも", word: "だれでも", romaji: "dare demo", meaning: "Anybody / যে কেউ", readings: ["0"] },
+  { kanji: "何でも", word: "なんでも", romaji: "nan demo", meaning: "Anything / যেকোনো কিছু", readings: ["なん"] },
+  { kanji: "こんな～", word: "こんな～", romaji: "konna~", meaning: "Like this / এইরকম", readings: ["0"] },
+  { kanji: "そんな～", word: "そんな～", romaji: "sonna~", meaning: "Like that / ওইরকম", readings: ["0"] },
+  { kanji: "あんな～", word: "あんな～", romaji: "anna~", meaning: "Like that (over there) / সেইরকম", readings: ["0"] },
+  { kanji: "片づきます", word: "かたづきます", romaji: "katadukimasu", meaning: "Tidy up / গুছিয়ে রাখা (জিনিসপত্র)", readings: ["かた"] },
+  { kanji: "出します", word: "だします", romaji: "dashimasu", meaning: "Put out (garbage) / ময়লা বাইরে বের করা", readings: ["だ"] },
+  { kanji: "燃えるごみ", word: "もえるごみ", romaji: "moeru gomi", meaning: "Burnable trash / পোড়ানো যায় এমন ময়লা", readings: ["も"] },
+  { kanji: "置き場", word: "おきば", romaji: "okiba", meaning: "Place to put / রাখার জায়গা", readings: ["お", "ば"] },
+  { kanji: "横", word: "よこ", romaji: "yoko", meaning: "Side / পাশে বা সাইড", readings: ["よこ"] },
+  { kanji: "瓶", word: "びん", romaji: "bin", meaning: "Bottle / বোতল", readings: ["びん"] },
+  { kanji: "缶", word: "かん", romaji: "kan", meaning: "Can / ক্যান", readings: ["かん"] },
+  { kanji: "お湯", word: "おゆ", romaji: "oyu", meaning: "Hot water / গরম পানি", readings: ["ゆ"] },
+  { kanji: "ガス", word: "ガス", romaji: "gasu", meaning: "Gas / গ্যাস", readings: ["0"] },
+  { kanji: "～会社", word: "～がいしゃ", romaji: "～gaisha", meaning: "Company / কোম্পানি", readings: ["かい", "しゃ"] },
+  { kanji: "困ったなあ", word: "こまったなあ", romaji: "komattanaa", meaning: "Trouble / কী যে করি (বিপদে পড়লে)", readings: ["こ"] },
+  { kanji: "電子メール", word: "でんしメール", romaji: "denshi meeru", meaning: "E-mail / ইমেইল", readings: ["でん", "し"] },
+  { kanji: "宇宙", word: "うちゅう", romaji: "uchuu", meaning: "Universe / মহাকাশ", readings: ["う", "ちゅう"] },
+  { kanji: "～様", word: "～さま", romaji: "～sama", meaning: "Mr./Ms. (polite) / জনাব বা শ্রদ্ধাভাজন", readings: ["さま"] },
+  { kanji: "宇宙船", word: "うちゅうせん", romaji: "uchuusen", meaning: "Spaceship / মহাকাশযান", readings: ["う", "ちゅう", "せん"] },
+  { kanji: "怖い", word: "こわい", romaji: "kowai", meaning: "Scary / ভয়ংকর", readings: ["こわ"] },
+  { kanji: "宇宙ステーション", word: "うちゅうステーション", romaji: "uchuu suteeshon", meaning: "Space station / মহাকাশ স্টেশন", readings: ["う", "ちゅう"] },
+  { kanji: "違います", word: "ちがいます", romaji: "chigaimasu", meaning: "Be different / ভিন্ন হওয়া বা না মেলা", readings: ["ちが"] },
+  { kanji: "宇宙飛行士", word: "うちゅうひこうし", romaji: "uchuuhikoushi", meaning: "Astronaut / নভোচারী", readings: ["う", "ちゅう", "ひ", "こう", "し"] }
+],
+  "Lesson 27": [
+  { kanji: "飼います", word: "かいまず", romaji: "kaimasu", meaning: "Keep (a pet), raise (animal) / রাখা (পোষা প্রাণী), পালন করা (প্রাণী)", readings: ["か"] },
+  { kanji: "走ります", word: "はしります", romaji: "hashirimasu", meaning: "Run, drive (along a road) / চালানো, ড্রাইভ করা (রাস্তায়)", readings: ["はし"] },
+  { kanji: "見えます", word: "みえます", romaji: "miemasu", meaning: "Can be seen / দেখতে পারা (যেমন- পাহাড়)", readings: ["み"] },
+  { kanji: "聞こえます", word: "きこえます", romaji: "kikoemasu", meaning: "Can be heard / শুনতে পারা (যেমন- শব্দ)", readings: ["き"] },
+  { kanji: "できます", word: "できます", romaji: "dekimasu", meaning: "Be completed, be made / তৈরি হওয়া, সমাপ্ত হওয়া (যেমন- রাস্তা)", readings: ["0"] },
+  { kanji: "開きます", word: "ひらきます", romaji: "hirakimasu", meaning: "Set up (a class), open / খোলা, চালু করা (ক্লাস)", readings: ["ひら"] },
+  { kanji: "心配", word: "しんぱい", romaji: "shinpai", meaning: "Worried, anxious / দুশ্চিন্তা, উদ্বিগ্ন", readings: ["しん", "ぱい"] },
+  { kanji: "ペット", word: "ペット", romaji: "petto", meaning: "Pet / পোষ্য প্রাণী", readings: ["0"] },
+  { kanji: "鳥", word: "とり", romaji: "tori", meaning: "Bird / পাখি", readings: ["とり"] },
+  { kanji: "声", word: "こえ", romaji: "koe", meaning: "Voice / কণ্ঠস্বর", readings: ["こえ"] },
+  { kanji: "波", word: "なみ", romaji: "nami", meaning: "Wave / ঢেউ", readings: ["なみ"] },
+  { kanji: "花火", word: "はなび", romaji: "hanabi", meaning: "Fireworks / আতশবাজি", readings: ["はな", "び"] },
+  { kanji: "道具", word: "どうぐ", romaji: "dougu", meaning: "Tool, instrument / যন্ত্রপাতি, সরঞ্জাম", readings: ["どう", "ぐ"] },
+  { kanji: "クリーニング", word: "クリーニング", romaji: "kuriiningu", meaning: "Cleaning, laundry / লন্ড্রি, পরিষ্কার", readings: ["0"] },
+  { kanji: "家", word: "いえ", romaji: "ie", meaning: "House, home / বাড়ি", readings: ["いえ"] },
+  { kanji: "マンション", word: "マンション", romaji: "manshon", meaning: "Apartment house / বাসাবাড়ি, ফ্ল্যাট", readings: ["0"] },
+  { kanji: "キッチン", word: "キッチン", romaji: "kitchin", meaning: "Kitchen / রান্নাঘর", readings: ["0"] },
+  { kanji: "教室", word: "きょうしつ", romaji: "kyoushitsu", meaning: "Classroom / শ্রেণিকক্ষ", readings: ["きょう", "しつ"] },
+  { kanji: "パーテイールーム", word: "パーティールーム", romaji: "paatiiruumu", meaning: "Party room / পার্টিরুম", readings: ["0"] },
+  { kanji: "方", word: "かた", romaji: "kata", meaning: "Person (polite) / ব্যক্তি", readings: ["かた"] },
+  { kanji: "～後", word: "～ご", romaji: "～go", meaning: "After / পরে", readings: ["ご"] },
+  { kanji: "～しか", word: "～しか", romaji: "～shika", meaning: "Only / শুধু", readings: ["0"] },
+  { kanji: "ほかの", word: "ほかの", romaji: "hoka no", meaning: "Other / এছাড়া, পাশাপাশি", readings: ["0"] },
+  { kanji: "はっきり", word: "はっきり", romaji: "hakkiri", meaning: "Clearly / পরিষ্কারভাবে", readings: ["0"] },
+  { kanji: "休みを取ります", word: "やすみをとります", romaji: "yasumi o torimasu", meaning: "Take a holiday / ছুটি নেওয়া", readings: ["やす", "と"] },
+  { kanji: "漫画", word: "まんが", romaji: "manga", meaning: "Cartoon / কার্টুন", readings: ["まん", "が"] },
+  { kanji: "ロボット", word: "ロボット", romaji: "robotto", meaning: "Robot / রোবট", readings: ["0"] },
+  { kanji: "家具", word: "かぐ", romaji: "kagu", meaning: "Furniture / আসবাবপত্র", readings: ["か", "ぐ"] },
+  { kanji: "本棚", word: "ほんだな", romaji: "hondana", meaning: "Bookcase / বইয়ের তাক", readings: ["ほん", "だな"] },
+  { kanji: "いつか", word: "いつか", romaji: "itsuka", meaning: "Someday / একদিন", readings: ["0"] },
+  { kanji: "建てます", word: "たてます", romaji: "tatemasu", meaning: "Build / নির্মাণ করা", readings: ["た"] },
+  { kanji: "素晴らしい", word: "すばらしい", romaji: "subarashii", meaning: "Wonderful / চমৎকার", readings: ["0"] },
+  { kanji: "子供たち", word: "こどもたち", romaji: "kodomotachi", meaning: "Children / বাচ্চারা", readings: ["こ", "ども"] },
+  { kanji: "大好き", word: "だいすき", romaji: "daisuki", meaning: "Like very much / খুব পছন্দ করা", readings: ["だい", "す"] },
+  { kanji: "主人公", word: "しゅじんこう", romaji: "shujinkou", meaning: "Hero, heroine / নায়ক, নায়িকা", readings: ["しゅ", "じん", "こう"] },
+  { kanji: "形", word: "かたち", romaji: "katachi", meaning: "Shape / আকার, আকৃতি", readings: ["かたち"] },
+  { kanji: "不思議", word: "ふしぎ", romaji: "fushigi", meaning: "Fantastic, mysterious / রহস্যময়, দুর্দান্ত", readings: ["ふ", "し", "ぎ"] },
+  { kanji: "ポケット", word: "ポケット", romaji: "poketto", meaning: "Pocket / পকেট", readings: ["0"] },
+  { kanji: "例えば", word: "たとえは", romaji: "tatoeba", meaning: "For example / উদাহরণস্বরূপ", readings: ["たと"] },
+  { kanji: "付けます", word: "つけます", romaji: "tsukemasu", meaning: "Attach, put on / সংযুক্ত করা, চালু করা", readings: ["つ"] },
+  { kanji: "自由に", word: "じゆうに", romaji: "jiyuuni", meaning: "Freely / স্বাধীনভাবে", readings: ["じ", "ゆう"] },
+  { kanji: "空", word: "そら", romaji: "sora", meaning: "Sky / আকাশ", readings: ["そら"] },
+  { kanji: "飛びます", word: "とびます", romaji: "tobimasu", meaning: "Fly / উড়া", readings: ["と"] },
+  { kanji: "昔", word: "むかし", romaji: "mukashi", meaning: "Old days, ancient times / প্রাচীনকাল, পুরোনো দিন", readings: ["むかし"] },
+  { kanji: "自分", word: "じぶん", romaji: "jibun", meaning: "Oneself / নিজের", readings: ["じ", "ぶん"] },
+  { kanji: "将来", word: "しょうらい", romaji: "shourai", meaning: "Future / ভবিষ্যৎ", readings: ["しょう", "らい"] },
+  { kanji: "景色", word: "けしき", romaji: "keshiki", meaning: "Scenery, view / দৃশ্য", readings: ["け", "しき"] },
+  { kanji: "昼間", word: "ひるま", romaji: "hiruma", meaning: "Daytime / দিনের বেলা", readings: ["ひる", "ま"] },
+  { kanji: "自動販売機", word: "じどうはんばいき", romaji: "jidouhanbaiki", meaning: "Vending machine / ভেন্ডিং মেশিন", readings: ["じ", "どう", "はん", "ばい", "き"] },
+  { kanji: "通信販売", word: "つうしんはんばい", romaji: "tsuushinhanbai", meaning: "Mail order / ডাকযোগে বিক্রি", readings: ["つう", "しん", "はん", "ばい"] },
+  { kanji: "ほとんど", word: "ほとんど", romaji: "hotondo", meaning: "Almost all / প্রায় সব", readings: ["0"] },
+  { kanji: "関西空港", word: "かんさいくうこう", romaji: "kansaikuukou", meaning: "Kansai Airport / কানসাই বিমানবন্দর", readings: ["かん", "さい", "くう", "こう"] },
+  { kanji: "秋葉原", word: "あきはばら", romaji: "akihabara", meaning: "Akihabara (shopping district) / আকিহাবারা (শপিং এলাকা)", readings: ["あき", "は", "ばら"] },
+  { kanji: "伊豆", word: "いず", romaji: "izu", meaning: "Izu (peninsula) / ইজু (উপদ্বীপ)", readings: ["い", "ず"] },
+  { kanji: "日曜大工", word: "にちようだいく", romaji: "nichiyoubidaiku", meaning: "Sunday carpenter / রবিবারের ছুঁতার", readings: ["にち", "よう", "だい", "く"] },
+  { kanji: "夢", word: "ゆめ", romaji: "yume", meaning: "Dream / স্বপ্ন", readings: ["ゆめ"] }
+],
+  "Lesson 28": [
+  { kanji: "売れます", word: "うれます", romaji: "uremasu", meaning: "Sell, be sold / বিক্রি হওয়া", readings: ["う"] },
+  { kanji: "踊ります", word: "おどります", romaji: "odorimasu", meaning: "Dance / নাচা", readings: ["おど"] },
+  { kanji: "噛みます", word: "かみます", romaji: "kamimasu", meaning: "Chew, bite / চিবানো", readings: ["か"] },
+  { kanji: "選びます", word: "えらびます", romaji: "erabimasu", meaning: "Choose / পছন্দ করা বা নির্বাচন করা", readings: ["えら"] },
+  { kanji: "通います", word: "かよいます", romaji: "kayoimasu", meaning: "Commute / যাতায়াত করা (স্কুল/অফিসে)", readings: ["かよ"] },
+  { kanji: "メモします", word: "メモします", romaji: "memo shimasu", meaning: "Take a note / নোট করা", readings: ["0"] },
+  { kanji: "真面目", word: "まじめ", romaji: "majime", meaning: "Serious, earnest / গম্ভীর, নিষ্ঠাবান", readings: ["ま", "じ", "め"] },
+  { kanji: "熱心", word: "ねっしん", romaji: "nesshin", meaning: "Enthusiastic / উৎসাহী", readings: ["ねっ", "しん"] },
+  { kanji: "偉い", word: "えらい", romaji: "erai", meaning: "Admirable, great / মহান, প্রশংসনীয়", readings: ["えら"] },
+  { kanji: "ちょうどいい", word: "ちょうどいい", romaji: "choudo ii", meaning: "Proper, just right / ঠিকঠাক", readings: ["0"] },
+  { kanji: "景色", word: "けしき", romaji: "keshiki", meaning: "Scenery, view / দৃশ্য", readings: ["け", "しき"] },
+  { kanji: "美容院", word: "びよういん", romaji: "biyouin", meaning: "Beauty parlor / বিউটি পার্লার", readings: ["び", "よう", "いん"] },
+  { kanji: "台所", word: "だいどころ", romaji: "daidokoro", meaning: "Kitchen / রান্নাঘর", readings: ["だい", "どころ"] },
+  { kanji: "経験", word: "けいけん", romaji: "keiken", meaning: "Experience / অভিজ্ঞতা", readings: ["けい", "けん"] },
+  { kanji: "力", word: "ちから", romaji: "chikara", meaning: "Power, strength / শক্তি", readings: ["ちから"] },
+  { kanji: "人気", word: "にんき", romaji: "ninki", meaning: "Popularity / জনপ্রিয়তা", readings: ["にん", "き"] },
+  { kanji: "形", word: "かたち", romaji: "katachi", meaning: "Shape, form / আকার, আকৃতি", readings: ["かたち"] },
+  { kanji: "色", word: "いろ", romaji: "iro", meaning: "Color / রঙ", readings: ["いろ"] },
+  { kanji: "味", word: "あじ", romaji: "aji", meaning: "Taste / স্বাদ", readings: ["あじ"] },
+  { kanji: "ガム", word: "ガム", romaji: "gamu", meaning: "Chewing gum / চুইংগাম", readings: ["0"] },
+  { kanji: "品物", word: "しなもの", romaji: "shinamono", meaning: "Goods / পণ্য বা জিনিসপত্র", readings: ["しな", "もの"] },
+  { kanji: "値段", word: "ねだん", romaji: "nedan", meaning: "Price / দাম", readings: ["ね", "だん"] },
+  { kanji: "給料", word: "きゅうりょう", romaji: "kyuuryou", meaning: "Salary / বেতন", readings: ["きゅう", "りょう"] },
+  { kanji: "ボーナス", word: "ボーナス", romaji: "boonasu", meaning: "Bonus / বোনাস", readings: ["0"] },
+  { kanji: "番組", word: "ばんぐみ", romaji: "bangumi", meaning: "Program (TV/Radio) / অনুষ্ঠান", readings: ["ばん", "ぐみ"] },
+  { kanji: "ドラマ", word: "ドラマ", romaji: "dorama", meaning: "Drama / নাটক", readings: ["0"] },
+  { kanji: "歌手", word: "かしゅ", romaji: "kashu", meaning: "Singer / গায়ক", readings: ["か", "しゅ"] },
+  { kanji: "小説", word: "しょうせつ", romaji: "shousetsu", meaning: "Novel / উপন্যাস", readings: ["しょう", "せつ"] },
+  { kanji: "小説家", word: "しょうせつか", romaji: "shousetsuka", meaning: "Novelist / ঔপন্যাসিক", readings: ["しょう", "せつ", "か"] },
+  { kanji: "～家", word: "～か", romaji: "～ka", meaning: "Specialist in... / বিশেষজ্ঞ", readings: ["か"] },
+  { kanji: "機", word: "き", romaji: "ki", meaning: "Machine / যন্ত্র", readings: ["き"] },
+  { kanji: "息子", word: "むすこ", romaji: "musuko", meaning: "(my) son / নিজের ছেলে", readings: ["むす", "こ"] },
+  { kanji: "息子さん", word: "むすこさん", romaji: "musukosan", meaning: "(someone else's) son / অন্যের ছেলে", readings: ["むす", "こ"] },
+  { kanji: "娘", word: "むすめ", romaji: "musume", meaning: "(my) daughter / নিজের মেয়ে", readings: ["むすめ"] },
+  { kanji: "娘さん", word: "むすめさん", romaji: "musumesan", meaning: "(someone else's) daughter / অন্যের মেয়ে", readings: ["むすめ"] },
+  { kanji: "自分", word: "じぶん", romaji: "jibun", meaning: "Oneself / নিজের", readings: ["じ", "ぶん"] },
+  { kanji: "将来", word: "しょうらい", romaji: "shourai", meaning: "Future / ভবিষ্যৎ", readings: ["しょう", "らい"] },
+  { kanji: "しばらく", word: "しばらく", romaji: "shibaraku", meaning: "A little while / কিছুক্ষণ", readings: ["0"] },
+  { kanji: "大抵", word: "たいてい", romaji: "taitei", meaning: "Usually / সাধারণত", readings: ["たい", "てい"] },
+  { kanji: "それに", word: "それに", romaji: "sore ni", meaning: "In addition / তদুপরি বা তাছাড়া", readings: ["0"] },
+  { kanji: "それで", word: "それで", romaji: "sore de", meaning: "Therefore, so / সেই কারণে", readings: ["0"] },
+  { kanji: "ちょっとお願いがあるんですが", word: "ちょっとおねがいがあるんですが", romaji: "chotto onegai ga arun desu ga", meaning: "I have a small favor to ask / আমার একটা অনুরোধ আছে", readings: ["ねが"] },
+  { kanji: "実は", word: "じつは", romaji: "jitsu wa", meaning: "Actually / আসলে", readings: ["じつ"] },
+  { kanji: "会話", word: "かいわ", romaji: "kaiwa", meaning: "Conversation / কথোপকথন", readings: ["かい", "わ"] },
+  { kanji: "お知らせ", word: "おしらせ", romaji: "oshirase", meaning: "Notice / ঘোষণা বা নোটিশ", readings: ["し"] },
+  { kanji: "参加します", word: "さんかします", romaji: "sankashimasu", meaning: "Participate / অংশগ্রহণ করা", readings: ["さん", "か"] },
+  { kanji: "日にち", word: "ひにち", romaji: "hinichi", meaning: "Date / তারিখ", readings: ["ひ", "にち"] },
+  { kanji: "土", word: "ど", romaji: "do", meaning: "Saturday / শনিবার", readings: ["ど"] },
+  { kanji: "体育館", word: "たいいくかん", romaji: "taiikukan", meaning: "Gymnasium / ব্যায়ামাগার", readings: ["たい", "いく", "かん"] },
+  { kanji: "無料", word: "むりょう", romaji: "muryou", meaning: "Free of charge / বিনামূল্যে", readings: ["む", "りょう"] },
+  { kanji: "誘います", word: "さそいます", romaji: "sasoimasu", meaning: "Invite / দাওয়াত দেওয়া বা আমন্ত্রণ জানানো", readings: ["さそ"] },
+  { kanji: "イベント", word: "イベント", romaji: "ibento", meaning: "Event / অনুষ্ঠান", readings: ["0"] }
+],
+  "Lesson 29": [
+  { kanji: "開きます", word: "あきます", romaji: "akimasu", meaning: "[a door] Open / খোলা (দরজা)", readings: ["あ"] },
+  { kanji: "閉まります", word: "しまります", romaji: "shimarimasu", meaning: "[a door] Close, shut / বন্ধ হওয়া (দরজা)", readings: ["し"] },
+  { kanji: "つきます", word: "つきます", romaji: "tsukimasu", meaning: "[a light] come on / চালু হওয়া (লাইট)", readings: ["0"] },
+  { kanji: "消えます", word: "きえます", romaji: "kiemasu", meaning: "[a light] go off, disappear / বন্ধ হওয়া (লাইট)", readings: ["き"] },
+  { kanji: "壊れます", word: "こわれます", romaji: "kowaremasu", meaning: "[a chair] Break / ভেঙে যাওয়া (চেয়ার)", readings: ["こわ"] },
+  { kanji: "割れます", word: "われます", romaji: "waremasu", meaning: "[a glass] Break, smash / ভেঙে যাওয়া (গ্লাস, কাপ)", readings: ["わ"] },
+  { kanji: "折れます", word: "おれます", romaji: "oremasu", meaning: "[a tree] Break, snap / ভেঙে যাওয়া (গাছ)", readings: ["お"] },
+  { kanji: "破れます", word: "やぶれます", romaji: "yaburemasu", meaning: "[paper] tear / ছিঁড়ে যাওয়া (কাগজ)", readings: ["やぶ"] },
+  { kanji: "汚れます", word: "よごれます", romaji: "yogoremasu", meaning: "[clothes] get dirty / ময়লা হওয়া (পোশাক)", readings: ["よご"] },
+  { kanji: "付きます", word: "つきまず", romaji: "tsukimasu", meaning: "[a pocket] be attached / লাগানো থাকা (পকেট)", readings: ["つ"] },
+  { kanji: "外れます", word: "はずれます", romaji: "hazuremasu", meaning: "[a button] be undone / খুলে যাওয়া (বোতাম)", readings: ["はず"] },
+  { kanji: "止まります", word: "とまります", romaji: "tomarimasu", meaning: "[a car] Stop, park / থামা বা দাঁড়ানো (গাড়ি)", readings: ["と"] },
+  { kanji: "間違えます", word: "まちがえます", romaji: "machigaemasu", meaning: "Make a mistake / ভুল করা", readings: ["ま", "ちが"] },
+  { kanji: "落とします", word: "おとします", romaji: "otoshimasu", meaning: "Drop, lose / হারিয়ে ফেলা বা পড়ে যাওয়া", readings: ["お"] },
+  { kanji: "掛かります", word: "かかります", romaji: "kakarimasu", meaning: "Be locked / তালা লাগানো থাকা", readings: ["か"] },
+  { kanji: "拭きます", word: "ふきます", romaji: "fukimasu", meaning: "Wipe / মোছা", readings: ["ふ"] },
+  { kanji: "取り替えます", word: "とりかえます", romaji: "torikaemasu", meaning: "Change / পরিবর্তন করা", readings: ["と", "か"] },
+  { kanji: "片付けます", word: "かたづけます", romaji: "katadukemasu", meaning: "Put things in order, tidy up / গুছিয়ে রাখা", readings: ["かた", "づ"] },
+  { kanji: "お皿", word: "おさら", romaji: "osara", meaning: "Plate, dish / প্লেট, ডিশ", readings: ["さら"] },
+  { kanji: "お茶碗", word: "おちゃわん", romaji: "ochawan", meaning: "Rice bowl / ভাতের বাটি", readings: ["ちゃ", "わん"] },
+  { kanji: "コップ", word: "コップ", romaji: "koppu", meaning: "Glass, cup / কাপ, পেয়ালা", readings: ["0"] },
+  { kanji: "ガラス", word: "ガラス", romaji: "garasu", meaning: "Glass (material) / কাঁচ", readings: ["0"] },
+  { kanji: "袋", word: "ふくろ", romaji: "fukuro", meaning: "Bag / ব্যাগ, থলে", readings: ["ふくろ"] },
+  { kanji: "書類", word: "しょるい", romaji: "shorui", meaning: "Document, papers / কাগজপত্র", readings: ["しょ", "るい"] },
+  { kanji: "枝", word: "えだ", romaji: "eda", meaning: "Branch, twig / শাখা, ডাল", readings: ["えだ"] },
+  { kanji: "駅員", word: "えきいん", romaji: "ekiin", meaning: "Station attendant / স্টেশন কর্মী", readings: ["えき", "いん"] },
+  { kanji: "交番", word: "こうばん", romaji: "kouban", meaning: "Police box / পুলিশ বক্স", readings: ["こう", "ばん"] },
+  { kanji: "スピーチ", word: "スピーチ", romaji: "supiichi", meaning: "Speech / বক্তৃতা", readings: ["0"] },
+  { kanji: "返事", word: "へんじ", romaji: "henji", meaning: "Reply, answer / উত্তর", readings: ["へん", "じ"] },
+  { kanji: "お先にどうぞ", word: "おさきにどうぞ", romaji: "osaki ni douzo", meaning: "After you, Go ahead please / আগে আপনি যান", readings: ["さき"] },
+  { kanji: "忘れ物", word: "わすれもの", romaji: "wasuremono", meaning: "Things left behind / ভুলে যাওয়া জিনিস", readings: ["わす", "もの"] },
+  { kanji: "このくらい", word: "このくらい", romaji: "kono kurai", meaning: "About this big / এই পরিমাণ বা এইটুকু", readings: ["0"] },
+  { kanji: "～側", word: "～がわ", romaji: "～gawa", meaning: "～side / ～পাশ", readings: ["がわ"] },
+  { kanji: "ポケット", word: "ポケット", romaji: "poketto", meaning: "Pocket / পকেট", readings: ["0"] },
+  { kanji: "～辺", word: "～へん", romaji: "～hen", meaning: "Around, about / চারপাশে", readings: ["へん"] },
+  { kanji: "覚えていません", word: "おぼえていません", romaji: "oboete imasen", meaning: "I don't remember / মনে নেই", readings: ["おぼ"] },
+  { kanji: "網棚", word: "あみだな", romaji: "amidana", meaning: "Overhead rack / মাথার ওপরের তাক", readings: ["あみ", "だな"] },
+  { kanji: "確か", word: "たしか", romaji: "tashika", meaning: "I'm pretty sure / নিশ্চিতভাবে", readings: ["たし"] },
+  { kanji: "地震", word: "じしん", romaji: "jishin", meaning: "Earthquake / ভূমিকম্প", readings: ["じ", "しん"] },
+  { kanji: "壁", word: "かべ", romaji: "kabe", meaning: "Wall / দেয়াল", readings: ["かべ"] },
+  { kanji: "針", word: "はり", romaji: "hari", meaning: "Hands (of a clock) / ঘড়ির কাঁটা", readings: ["はり"] },
+  { kanji: "指します", word: "さします", romaji: "sashimasu", meaning: "Point / নির্দেশ করা", readings: ["さ"] },
+  { kanji: "駅前", word: "えきまえ", romaji: "ekimae", meaning: "Front of a station / স্টেশনের সামনে", readings: ["えき", "まえ"] },
+  { kanji: "倒れます", word: "たおれます", romaji: "taoremasu", meaning: "Fall down / পড়ে যাওয়া", readings: ["たお"] },
+  { kanji: "西", word: "にし", romaji: "nishi", meaning: "West / পশ্চিম", readings: ["にし"] },
+  { kanji: "～の方", word: "～のほう", romaji: "～no hou", meaning: "Direction of ～ / ～এর দিক", readings: ["ほう"] },
+  { kanji: "燃えます", word: "もえます", romaji: "moemasu", meaning: "Burn / পোড়া", readings: ["も"] }
+],
+  "Lesson 30": [
+  { kanji: "貼ります", word: "はります", romaji: "harimasu", meaning: "put up, post, paste / লাগানো, আটকানো", readings: ["は"] },
+  { kanji: "掛けます", word: "かけます", romaji: "kakemasu", meaning: "hang / ঝুলানো", readings: ["か"] },
+  { kanji: "飾ります", word: "かざります", romaji: "kazarimasu", meaning: "display, decorate / সাজানো, প্রদর্শন করা", readings: ["かざ"] },
+  { kanji: "並べます", word: "ならべます", romaji: "narabemasu", meaning: "arrange, line up / সারিবদ্ধভাবে রাখা", readings: ["なら"] },
+  { kanji: "植えます", word: "うえます", romaji: "uemasu", meaning: "plant / রোপণ করা (গাছ)", readings: ["うえ"] },
+  { kanji: "戻します", word: "もどします", romaji: "modoshimasu", meaning: "return, put back / ফিরিয়ে দেওয়া, আগের জায়গায় রাখা", readings: ["もど"] },
+  { kanji: "まとめます", word: "まとめます", romaji: "matomemasu", meaning: "put together, summarize / গুছিয়ে রাখা, সংক্ষেপ করা", readings: ["0"] },
+  { kanji: "片づけます", word: "かたづけます", romaji: "katadukemasu", meaning: "put things in order, tidy up / গুছিয়ে রাখা, সাজানো", readings: ["かた"] },
+  { kanji: "しまいます", word: "しまいます", romaji: "shimaimasu", meaning: "put things away / তুলে রাখা, ভেতরে রাখা", readings: ["0"] },
+  { kanji: "決めます", word: "きめます", romaji: "kimemasu", meaning: "decide / সিদ্ধান্ত নেওয়া", readings: ["き"] },
+  { kanji: "知らせます", word: "しらせます", romaji: "shirasemasu", meaning: "inform / জানানো", readings: ["し"] },
+  { kanji: "相談します", word: "そうだんします", romaji: "soudanshimasu", meaning: "consult, discuss / আলোচনা করা, পরামর্শ করা", readings: ["そう", "だん"] },
+  { kanji: "予習します", word: "よしゅうします", romaji: "yoshuushimasu", meaning: "prepare one's lesson / পাঠের পূর্ব প্রস্তুতি নেওয়া", readings: ["よ", "しゅう"] },
+  { kanji: "復習します", word: "ふくしゅうします", romaji: "fukushuushimasu", meaning: "review one's lesson / পাঠ পুনরায় পড়া (রিভিশন)", readings: ["ふく", "しゅう"] },
+  { kanji: "そのままにします", word: "そのままにします", romaji: "sonomama ni shimasu", meaning: "leave things as they are / যেভাবে আছে সেভাবে রাখা", readings: ["0"] },
+  { kanji: "お子さん", word: "おこさん", romaji: "okosan", meaning: "someone else's child / অন্যের সন্তান", readings: ["こ"] },
+  { kanji: "授業", word: "じゅぎょう", romaji: "jugyou", meaning: "class / ক্লাস, পাঠদান", readings: ["じゅ", "ぎょう"] },
+  { kanji: "講義", word: "こうぎ", romaji: "kougi", meaning: "lecture / বক্তৃতা, লেকচার", readings: ["こう", "ぎ"] },
+  { kanji: "ミーティング", word: "ミーティング", romaji: "miitingu", meaning: "meeting / মিটিং, সভা", readings: ["0"] },
+  { kanji: "予定", word: "よてい", romaji: "yotei", meaning: "plan, schedule / পরিকল্পনা, সময়সূচী", readings: ["よ", "てい"] },
+  { kanji: "お知らせ", word: "おしらせ", romaji: "oshirase", meaning: "notice / ঘোষণা, নোটিশ", readings: ["し"] },
+  { kanji: "案内書", word: "あんないしょ", romaji: "annaisho", meaning: "guidebook / নির্দেশিকা বই", readings: ["あん", "ない", "しょ"] },
+  { kanji: "カレンダー", word: "カレンダー", romaji: "karendaa", meaning: "calendar / ক্যালেন্ডার", readings: ["0"] },
+  { kanji: "ポスター", word: "ポスター", romaji: "posutaa", meaning: "poster / পোস্টার", readings: ["0"] },
+  { kanji: "予定表", word: "よていひょう", romaji: "yoteihyou", meaning: "schedule / সূচীপত্র", readings: ["よ", "てい", "ひょう"] },
+  { kanji: "ごみ箱", word: "ごみばこ", romaji: "gomibako", meaning: "trash can / ময়লা ফেলার ঝুড়ি", readings: ["はこ"] },
+  { kanji: "人形", word: "にんぎょう", romaji: "ningyou", meaning: "doll / পুতুল", readings: ["にん", "ぎょう"] },
+  { kanji: "花瓶", word: "かびん", romaji: "kabin", meaning: "vase / ফুলদানি", readings: ["か", "びん"] },
+  { kanji: "鏡", word: "かがみ", romaji: "kagami", meaning: "mirror / আয়না", readings: ["かがみ"] },
+  { kanji: "引き出し", word: "ひきだし", romaji: "hikidashi", meaning: "drawer / ড্রয়ার", readings: ["ひ", "だ"] },
+  { kanji: "玄関", word: "げんかん", romaji: "genkan", meaning: "entrance / প্রবেশপথ", readings: ["げん", "かん"] },
+  { kanji: "廊下", word: "ろうか", romaji: "ろうか", meaning: "corridor / বারান্দা, করিডোর", readings: ["ろう", "か"] },
+  { kanji: "壁", word: "かべ", romaji: "kabe", meaning: "wall / দেয়াল", readings: ["かべ"] },
+  { kanji: "池", word: "いけ", romaji: "ike", meaning: "pond / পুকুর", readings: ["いけ"] },
+  { kanji: "交番", word: "こうばん", romaji: "kouban", meaning: "police box / পুলিশ বক্স", readings: ["こう", "ばん"] },
+  { kanji: "元の所", word: "もとのところ", romaji: "moto no tokoro", meaning: "original place / মূল জায়গা", readings: ["もと", "ところ"] },
+  { kanji: "周り", word: "まわり", romaji: "mawari", meaning: "around / চারপাশ", readings: ["まわ"] },
+  { kanji: "真ん中", word: "まんなか", romaji: "mannaka", meaning: "center / মাঝখানে", readings: ["ま", "なか"] },
+  { kanji: "隅", word: "すみ", romaji: "sumi", meaning: "corner / কোণা", readings: ["すみ"] },
+  { kanji: "まだ", word: "まだ", romaji: "mada", meaning: "still / এখনও", readings: ["0"] },
+  { kanji: "リュック", word: "リュック", romaji: "ryukku", meaning: "backpack / পিঠের ব্যাগ", readings: ["0"] },
+  { kanji: "非常袋", word: "ひじょうぶくろ", romaji: "hijoubukuro", meaning: "emergency kit bag / জরুরি ব্যাগ", readings: ["ひ", "じょう", "ぶくろ"] },
+  { kanji: "非常時", word: "ひじょうじ", romaji: "hijouji", meaning: "emergency / জরুরি সময়", readings: ["ひ", "じょう", "じ"] },
+  { kanji: "生活します", word: "せいかつします", romaji: "seikatsushimasu", meaning: "live / জীবনযাপন করা", readings: ["せい", "かつ"] },
+  { kanji: "懐中電灯", word: "かいちゅうでんとう", romaji: "kaichuudentou", meaning: "flashlight / টর্চলাইট", readings: ["かい", "ちゅう", "দের", "とう"] },
+  { kanji: "～とか、～とか", word: "～とか、～とか", romaji: "~toka, ~toka", meaning: "..., ..., and so on / ...অথবা, ...ইত্যাদি", readings: ["0"] },
+  { kanji: "丸い", word: "まるい", romaji: "marui", meaning: "round / গোলাকার", readings: ["まる"] },
+  { kanji: "ある～", word: "ある～", romaji: "aru~", meaning: "a certain... / কোন এক...", readings: ["0"] },
+  { kanji: "夢を見ます", word: "ゆめをみます", romaji: "yume o mimasu", meaning: "dream / স্বপ্ন দেখা", readings: ["ゆめ", "み"] },
+  { kanji: "うれしい", word: "うれしい", romaji: "ureshii", meaning: "happy / খুশি", readings: ["0"] },
+  { kanji: "嫌な", word: "いやな", romaji: "iyana", meaning: "hateful, disagreeable / অপছন্দনীয়", readings: ["いや"] },
+  { kanji: "すると", word: "すると", romaji: "suruto", meaning: "then / তারপর", readings: ["0"] },
+  { kanji: "目が覚めます", word: "めがさめます", romaji: "me ga samemasu", meaning: "wake up / ঘুম থেকে জাগা", readings: ["め", "さ"] }
+],
+  // "Lesson 31": 
+  // "Lesson 32": 
+  // "Lesson 33": 
+  // "Lesson 34": 
+  // "Lesson 35": 
+  // "Lesson 36": 
+  // "Lesson 37": 
+  // "Lesson 38": 
+  // "Lesson 39": 
+  // "Lesson 40": 
+  // "Lesson 41": 
+  // "Lesson 42": 
+  // "Lesson 43": 
+  // "Lesson 44": 
+  // "Lesson 45": 
+  // "Lesson 41": 
+  // "Lesson 42": 
+  // "Lesson 43": 
+  // "Lesson 44": 
+  // "Lesson 45": 
+  // "Lesson 46": 
+  // "Lesson 47": 
+  // "Lesson 48": 
+  // "Lesson 49": 
+  // "Lesson 50": 
+
+
+};
+
+let currentDeck = [];
+let index = 0;
+let mode = 'K2M'; 
+
+// --- NEW SHUFFLE FUNCTION ---
+function shuffleDeck() {
+  // Fisher-Yates Shuffle Algorithm
+  for (let i = currentDeck.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [currentDeck[i], currentDeck[j]] = [currentDeck[j], currentDeck[i]];
+  }
+  index = 0; // Reset to start of the newly shuffled deck
+  resetCard();
+}
+// ----------------------------
+
+function init() {
+  const select = document.getElementById("setSelect");
+  Object.keys(allLessons).forEach(l => {
+    const opt = document.createElement("option");
+    opt.value = l; opt.textContent = l;
+    select.appendChild(opt);
+  });
+  loadDeck();
+}
+
+function setMode(newMode) {
+  mode = newMode;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(`btn-${mode}`).classList.add('active');
+  resetCard();
+}
+
+function loadDeck() {
+  // Copy the lesson array so we don't permanently mess up the original order
+  currentDeck = [...allLessons[document.getElementById("setSelect").value]];
+  
+  // Automatically shuffle when a new lesson is selected
+  shuffleDeck(); 
+  
+  index = 0;
+  resetCard();
+}
+
+function updateProgress() {
+  const total = currentDeck.length;
+  const current = index + 1;
+  const percentage = Math.round((current / total) * 100);
+  
+  document.getElementById("progressText").textContent = `Word ${current} of ${total} (${percentage}%)`;
+  document.getElementById("progressBar").style.width = `${percentage}%`;
+}
+
+function resetCard() {
+  document.getElementById("strokeSection").style.display = "none";
+  ["displaySub", "displayMeaning", "displayRomaji"].forEach(id => {
+    document.getElementById(id).classList.remove("visible");
+    document.getElementById(id).classList.add("hidden");
+  });
+  
+  const card = currentDeck[index];
+  const main = document.getElementById("displayMain");
+  const sub = document.getElementById("displaySub");
+  const mean = document.getElementById("displayMeaning");
+  const rom = document.getElementById("displayRomaji");
+
+  // Logic to handle empty decks or errors
+  if(!card) return;
+
+  if (mode === 'K2M') {
+    main.textContent = card.kanji;
+    sub.textContent = card.word;
+    mean.textContent = card.meaning;
+    rom.textContent = card.romaji;
+  } else if (mode === 'S2MK') {
+    main.textContent = card.word;
+    sub.textContent = card.kanji;
+    mean.textContent = card.meaning;
+    rom.textContent = card.romaji;
+  } else {
+    main.textContent = card.meaning;
+    sub.textContent = card.kanji;
+    mean.textContent = card.word;
+    rom.textContent = card.romaji;
+  }
+  updateProgress();
+}
+
+function reveal() {
+  ["displaySub", "displayMeaning", "displayRomaji"].forEach(id => {
+    document.getElementById(id).classList.remove("hidden");
+    document.getElementById(id).classList.add("visible");
+  });
+}
+
+function changeCard(step) {
+  index = (index + step + currentDeck.length) % currentDeck.length;
+  resetCard();
+}
+
+// ... (Rest of your Stroke/Animation functions remain the same)
+
+document.getElementById("setSelect").onchange = loadDeck;
+init();
+
+function toggleStrokes() {
+  const section = document.getElementById("strokeSection");
+  if (section.style.display === "block") {
+    section.style.display = "none";
+  } else {
+    reveal();
+    section.style.display = "block";
+    renderStrokes();
+  }
+}
+
+async function renderStrokes() {
+  const section = document.getElementById("strokeSection");
+  const card = currentDeck[index];
+  const kanjis = card.kanji.split('').filter(c => /[一-龯]/.test(c));
+  section.innerHTML = "";
+
+  for (let i = 0; i < kanjis.length; i++) {
+    const char = kanjis[i];
+    const reading = card.readings ? card.readings[i] : "";
+    const hex = char.charCodeAt(0).toString(16).padStart(5, '0');
+    
+    const row = document.createElement("div");
+    row.className = "kanji-row";
+    row.innerHTML = `
+      <div class="kanji-info">
+        <span style="font-size: 50px; font-weight: bold;">${char}</span>
+        <span style="font-size: 25px; color: var(--accent);">${reading}</span>
+        <button class="btn-animate" onclick="playAnimation('${hex}')">▶ WRITING PATTERN</button>
+      </div>
+      <div class="writing-area" id="area-${hex}"></div>
+    `;
+    section.appendChild(row);
+
+    try {
+      const resp = await fetch(`https://raw.githubusercontent.com/KanjiVG/kanjivg/master/kanji/${hex}.svg`);
+      const svgText = await resp.text();
+      const area = document.getElementById(`area-${hex}`);
+      const parser = new DOMParser();
+      const svgDoc = parser.parseFromString(svgText, "image/svg+xml");
+      const paths = svgDoc.querySelectorAll('path');
+
+      const animBox = document.createElement("div");
+      animBox.className = "stroke-box";
+      animBox.id = `anim-box-${hex}`;
+      animBox.innerHTML = svgText;
+      animBox.style.border = "3px solid var(--accent)";
+      area.appendChild(animBox);
+
+      for (let j = 1; j <= paths.length; j++) {
+        const box = document.createElement("div");
+        box.className = "stroke-box";
+        const clone = svgDoc.documentElement.cloneNode(true);
+        const cPaths = clone.querySelectorAll('path');
+        cPaths.forEach((p, pIdx) => {
+          if (pIdx < j) p.style.stroke = (pIdx === j - 1) ? "#d00" : "#333";
+          else p.style.display = "none";
+        });
+        box.appendChild(clone);
+        area.appendChild(box);
+      }
+    } catch (e) { console.error(e); }
+  }
+}
+
+function playAnimation(hex) {
+  const box = document.getElementById(`anim-box-${hex}`);
+  const paths = box.querySelectorAll('path');
+  paths.forEach((path, i) => {
+    path.style.strokeDasharray = "1000";
+    path.style.strokeDashoffset = "1000";
+    path.style.animation = "none";
+    void path.offsetWidth; 
+    path.style.animation = `writePath 1s ease-in-out forwards`;
+    path.style.animationDelay = `${i * 0.7}s`;
+  });
+}
+
+document.getElementById("setSelect").onchange = loadDeck;
+init();
+</script>
+</body>
+</html>
