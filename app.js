@@ -1189,7 +1189,7 @@ function init() {
     opt.value = l; opt.textContent = l;
     select.appendChild(opt);
   });
-  select.value = "Lesson 1";
+  select.value = "n5 kanjis";
   loadDeck();
 }
 
