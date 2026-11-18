@@ -5,89 +5,192 @@
 
 <style>
 :root {
-  --primary: #2c3e50;
-  --accent: #d35400;
-  --success: #27ae60;
-  --info: #2980b9;
-  --bg: #f8f9fa;
-  --text: #333;
+  color-scheme: light;
+  --primary: #243b63;
+  --accent: #5548c8;
+  --success: #237a52;
+  --info: #2563a6;
+  --bg: #f3f6fb;
+  --surface: #ffffff;
+  --surface-raised: #f7f9fc;
+  --text: #202b3c;
+  --muted: #66758a;
+  --border: #dce4ef;
 }
 
 * { box-sizing: border-box; }
-body { margin: 0; font-family: 'Helvetica Neue', Arial, sans-serif; background: var(--bg); color: var(--text); }
+body {
+  min-height: 100vh;
+  margin: 0;
+  color: var(--text);
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  background: var(--bg);
+}
 
-.container { width: 100%; max-width: 1200px; margin: 0 auto; padding: 20px; }
+.container { width: min(100%, 980px); margin: 0 auto; padding: 32px 24px 56px; }
 
 /* --- HEADER & PROGRESS --- */
 header {
-  background: var(--primary); color: white; padding: 25px; border-radius: 15px;
-  margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  position: relative;
+  overflow: hidden;
+  padding: 28px;
+  margin-bottom: 22px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: 0 4px 18px rgba(31, 48, 77, 0.06);
 }
 
-.top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px; }
+.top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
+.top-bar h1 {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--text);
+  font-size: clamp(24px, 4vw, 34px);
+  letter-spacing: -0.025em;
+}
+.top-bar h1::before {
+  content: "JAPANESE VOCABULARY";
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+#setSelect {
+  max-width: 100%;
+  min-height: 46px;
+  padding: 10px 38px 10px 14px !important;
+  border: 1px solid var(--border);
+  border-radius: 10px !important;
+  background: #fff;
+  color: var(--text);
+  font: inherit;
+}
 
-.progress-info { font-size: 14px; font-weight: bold; color: #bdc3c7; margin-bottom: 5px; display: block; }
-.progress-container { width: 100%; background: rgba(255,255,255,0.1); height: 8px; border-radius: 4px; overflow: hidden; margin-bottom: 20px; }
-#progressBar { width: 0%; height: 100%; background: var(--success); transition: width 0.3s ease; }
+.progress-info { font-size: 14px; font-weight: bold; color: var(--muted); margin-bottom: 9px; display: block; }
+.progress-container { width: 100%; background: #e8edf5; height: 8px; border-radius: 20px; overflow: hidden; margin-bottom: 24px; }
+#progressBar { width: 0%; height: 100%; border-radius: inherit; background: #62a77d; transition: width 0.3s ease; }
 
 /* --- MODE SELECTOR --- */
 .mode-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .mode-btn {
-  padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3);
-  background: rgba(255,255,255,0.1); color: white; cursor: pointer; font-weight: bold; font-size: 14px;
+  min-height: 48px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-raised);
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
 }
-.mode-btn.active { background: var(--accent); border-color: var(--accent); }
+.mode-btn:hover { border-color: #9ba8d9; }
+.mode-btn.active { background: #efefff; border-color: #b7b2ed; color: #4136a8; }
 
 /* --- FLASHCARD --- */
 .flashcard {
-  background: white; border-radius: 20px; padding: 0px 0px;
-  text-align: center; margin-bottom: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.05);
-  border: 1px solid #eee; position: relative;
+  position: relative;
+  display: flex;
+  min-height: clamp(250px, 34vw, 340px);
+  flex-direction: column;
+  justify-content: center;
+  overflow: hidden;
+  padding: 48px 24px;
+  margin-bottom: 18px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--surface);
+  text-align: center;
+  box-shadow: 0 4px 18px rgba(31, 48, 77, 0.06);
 }
-.main-text { font-size: 60px; font-weight: bold; margin: 0; color: #1a1a1a;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+.flashcard::before, .flashcard::after {
+  content: none;
 }
-.sub-text { font-size: 48px; color: #7f8c8d; margin: 15px 0; min-height: 55px; }
-.meaning-text { font-size: 30px; color: var(--accent); font-weight: bold; margin-bottom: 10px; min-height: 35px; }
-.romaji-text { font-size: 22px; color: #95a5a6; font-style: italic; min-height: 25px; }
+.main-text { display: flex; justify-content: center; align-items: center; margin: 0; color: var(--text); font-size: clamp(48px, 9vw, 82px); font-weight: 700; line-height: 1.25; overflow-wrap: anywhere; }
+.sub-text { min-height: 44px; margin: 16px 0 0; color: var(--info); font-size: clamp(24px, 5vw, 38px); line-height: 1.35; overflow-wrap: anywhere; }
+.meaning-text { min-height: 30px; margin: 12px 0 0; color: var(--accent); font-size: clamp(20px, 4vw, 28px); font-weight: bold; line-height: 1.4; overflow-wrap: anywhere; }
+.romaji-text { min-height: 24px; margin-top: 8px; color: var(--muted); font-size: 17px; font-style: italic; overflow-wrap: anywhere; }
 
 .hidden { visibility: hidden; opacity: 0; }
 .visible { visibility: visible; opacity: 1; transition: opacity 0.3s; }
 
 /* --- CONTROLS --- */
-.controls-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 40px; }
+.controls-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 36px; }
 .controls-grid button {
-  padding: 20px; border-radius: 12px; border: none; font-size: 18px; font-weight: bold;
-  cursor: pointer; transition: transform 0.1s;
+  min-height: 56px;
+  padding: 14px 12px;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.035em;
+  transition: transform 0.15s ease, filter 0.15s ease, border-color 0.15s ease;
 }
-.controls-grid button:active { transform: scale(0.97); }
+.controls-grid button:hover { filter: brightness(1.08); }
+.controls-grid button:active { transform: scale(0.98); }
 .btn-reveal { background: var(--success); color: white; grid-column: span 2; }
-.btn-stroke { background: var(--info); color: white; grid-column: span 2; }
-.btn-nav { background: #eee; color: #555; }
+.btn-stroke { background: #eaf2fb; border-color: #c8d8eb !important; color: #245486; grid-column: span 2; }
+.btn-nav { background: var(--surface); border-color: var(--border) !important; color: var(--text); }
+button:focus-visible, select:focus-visible { outline: 2px solid var(--info); outline-offset: 3px; }
 
 /* --- STROKE SECTION --- */
-.stroke-section { display: none; margin-top: 30px; border-top: 5px solid var(--primary); padding-top: 40px; }
-.kanji-row { background: white; padding: 35px; border-radius: 20px; margin-bottom: 40px; border: 1px solid #ddd; }
-.kanji-info { display: flex; align-items: center; gap: 25px; margin-bottom: 25px; }
-.btn-animate { background: var(--accent); color: white; border: none; padding: 12px 25px; border-radius: 50px; cursor: pointer; font-weight: bold; }
+.stroke-section { display: none; padding-top: 24px; border-top: 1px solid var(--border); }
+.stroke-heading { margin: 0 0 18px; }
+.stroke-heading h2 { margin: 0 0 6px; font-size: 22px; }
+.stroke-heading p { margin: 0; color: var(--muted); line-height: 1.5; }
+.kanji-row { padding: clamp(18px, 4vw, 30px); margin-bottom: 18px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); box-shadow: 0 3px 12px rgba(31, 48, 77, 0.04); }
+.kanji-info { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 18px; }
+.kanji-character { font-size: 44px; font-weight: bold; }
+.kanji-reading { color: var(--accent); font-size: 20px; }
+.btn-animate { min-height: 44px; padding: 10px 18px; border: 1px solid #c9c4ee; border-radius: 9px; background: #f1f0ff; color: #4136a8; cursor: pointer; font-weight: bold; }
 
-.writing-area { display: flex; flex-wrap: wrap; gap: 20px; overflow-x: auto; padding-bottom: 10px; }
+.writing-area { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 12px; }
 .stroke-box {
-  width: 180px; height: 180px; border: 1px solid #ccc; flex-shrink: 0;
-  background-image: linear-gradient(to right, #f5f5f5 1px, transparent 1px), linear-gradient(to bottom, #f5f5f5 1px, transparent 1px);
-  background-size: 50% 50%; display: flex; align-items: center; justify-content: center;
+  position: relative;
+  display: flex;
+  width: 100%;
+  aspect-ratio: 1;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 8px 26px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background-color: #fbfcfe;
+  background-image: linear-gradient(to right, rgba(57, 86, 126, 0.07) 1px, transparent 1px), linear-gradient(to bottom, rgba(57, 86, 126, 0.07) 1px, transparent 1px);
+  background-size: 50% 50%;
 }
-.stroke-box svg { width: 150px; height: 150px; }
-path { fill: none; stroke: #333; stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; }
+.stroke-box::after { position: absolute; right: 4px; bottom: 7px; left: 4px; color: var(--muted); content: attr(data-step); font-size: 12px; font-weight: 700; text-align: center; }
+.stroke-box.current-character { border: 2px solid #7e9bc1; background-color: #f0f5fb; }
+.stroke-box svg { width: 84%; height: 84%; }
+.stroke-box path { fill: none; stroke: #344054; stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; }
 
 @keyframes writePath { to { stroke-dashoffset: 0; } }
 
-@media (max-width: 768px) {
-  .main-text { font-size: 70px; }
-  .stroke-box { width: 150px; height: 150px; }
-  .controls-grid button { padding: 15px; font-size: 14px; }
+@media (max-width: 640px) {
+  .container { padding: 16px 14px 32px; }
+  header { padding: 20px 16px; margin-bottom: 14px; border-radius: 14px; }
+  .top-bar { align-items: stretch; margin-bottom: 20px; }
+  .top-bar h1 { margin: 0; }
+  #setSelect { width: 100%; }
+  .mode-grid { gap: 7px; }
+  .mode-btn { min-height: 54px; padding: 9px 6px; font-size: 11px; line-height: 1.3; }
+  .flashcard { min-height: 250px; padding: 38px 16px; margin-bottom: 12px; border-radius: 14px; }
+  .controls-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-bottom: 26px; }
+  .controls-grid button { min-height: 52px; padding: 12px 8px; font-size: 12px; }
+  .writing-area { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 9px; }
+}
+
+@media (max-width: 360px) {
+  .mode-grid { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
 }
 </style>
 </head>
@@ -97,7 +200,7 @@ path { fill: none; stroke: #333; stroke-width: 3.5; stroke-linecap: round; strok
 <div class="container">
   <header>
     <div class="top-bar">
-      <h1 style="margin:0">Japanese Study Sensei</h1>
+      <h1>Japanese Study Sensei</h1>
       <select id="setSelect" style="padding:10px; border-radius:8px;"></select>
     </div>
 
@@ -122,7 +225,7 @@ path { fill: none; stroke: #333; stroke-width: 3.5; stroke-linecap: round; strok
 
   <div class="controls-grid">
     <button class="btn-reveal" onclick="reveal()">REVEAL ANSWER</button>
-    <button class="btn-stroke" onclick="toggleStrokes()">SHOW STROKE ORDER</button>
+    <button class="btn-stroke" onclick="toggleStrokes()">PRACTICE STROKE ORDER</button>
     <button class="btn-nav" onclick="changeCard(-1)">PREVIOUS</button>
     <button class="btn-nav" onclick="changeCard(1)">NEXT</button>
   </div>
@@ -1419,7 +1522,12 @@ async function renderStrokes() {
   const section = document.getElementById("strokeSection");
   const card = currentDeck[index];
   const kanjis = card.kanji.split('').filter(c => /[一-龯]/.test(c));
-  section.innerHTML = "";
+  section.innerHTML = `
+    <div class="stroke-heading">
+      <h2>Stroke order guide</h2>
+      <p>Start with the complete character, then follow each numbered step.</p>
+    </div>
+  `;
 
   for (let i = 0; i < kanjis.length; i++) {
     const char = kanjis[i];
@@ -1430,9 +1538,9 @@ async function renderStrokes() {
     row.className = "kanji-row";
     row.innerHTML = `
       <div class="kanji-info">
-        <span style="font-size: 50px; font-weight: bold;">${char}</span>
-        <span style="font-size: 25px; color: var(--accent);">${reading}</span>
-        <button class="btn-animate" onclick="playAnimation('${hex}')">▶ WRITING PATTERN</button>
+        <span class="kanji-character">${char}</span>
+        <span class="kanji-reading">${reading}</span>
+        <button class="btn-animate" onclick="playAnimation('${hex}')">Play stroke animation</button>
       </div>
       <div class="writing-area" id="area-${hex}"></div>
     `;
@@ -1447,19 +1555,20 @@ async function renderStrokes() {
       const paths = svgDoc.querySelectorAll('path');
 
       const animBox = document.createElement("div");
-      animBox.className = "stroke-box";
+      animBox.className = "stroke-box current-character";
       animBox.id = `anim-box-${hex}`;
+      animBox.dataset.step = "Full character";
       animBox.innerHTML = svgText;
-      animBox.style.border = "3px solid var(--accent)";
       area.appendChild(animBox);
 
       for (let j = 1; j <= paths.length; j++) {
         const box = document.createElement("div");
         box.className = "stroke-box";
+        box.dataset.step = `Step ${j}`;
         const clone = svgDoc.documentElement.cloneNode(true);
         const cPaths = clone.querySelectorAll('path');
         cPaths.forEach((p, pIdx) => {
-          if (pIdx < j) p.style.stroke = (pIdx === j - 1) ? "#d00" : "#333";
+          if (pIdx < j) p.style.stroke = (pIdx === j - 1) ? "#d95d54" : "#344054";
           else p.style.display = "none";
         });
         box.appendChild(clone);
@@ -1472,13 +1581,17 @@ async function renderStrokes() {
 function playAnimation(hex) {
   const box = document.getElementById(`anim-box-${hex}`);
   const paths = box.querySelectorAll('path');
+  const strokeDuration = 1.1;
+  const strokeInterval = 1.25;
+
   paths.forEach((path, i) => {
-    path.style.strokeDasharray = "1000";
-    path.style.strokeDashoffset = "1000";
+    const length = path.getTotalLength();
+    path.style.strokeDasharray = `${length}`;
+    path.style.strokeDashoffset = `${length}`;
     path.style.animation = "none";
-    void path.offsetWidth; 
-    path.style.animation = `writePath 1s ease-in-out forwards`;
-    path.style.animationDelay = `${i * 0.7}s`;
+    void path.offsetWidth;
+    path.style.animation = `writePath ${strokeDuration}s cubic-bezier(0.45, 0, 0.2, 1) forwards`;
+    path.style.animationDelay = `${i * strokeInterval}s`;
   });
 }
 
